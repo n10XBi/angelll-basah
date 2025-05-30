@@ -1,0 +1,18 @@
+{
+  "name": "bokepmama-downloader",
+  "version": "1.1.0",
+  "description": "Bot scrapper link download dari bokepmama pakai puppeteer + axios",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Genta IP",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cheerio": "^1.0.0-rc.12",
+    "tough-cookie": "^4.1.3",
+    "axios-cookiejar-support": "^5.0.1",
+    "puppeteer": "^21.3.8"
+  }
+}
