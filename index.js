@@ -1,10 +1,19 @@
-// ✅ UPDATED VERSION PUPPETEER + CLOUDFLARE BYPASS ✨
-// Pastikan install:
-// npm i puppeteer-extra puppeteer-extra-plugin-stealth axios cheerio tough-cookie axios-cookiejar-support
+// 💥 FINAL VERSION: BYPASS CLOUDFLARE EXTRA MODE
+// install dulu semua dependensi:
+// npm i puppeteer-extra puppeteer-extra-plugin-stealth puppeteer-extra-plugin-user-preferences axios cheerio tough-cookie axios-cookiejar-support fs
 
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const UserPrefs = require('puppeteer-extra-plugin-user-preferences');
 puppeteer.use(StealthPlugin());
+puppeteer.use(UserPrefs({
+  userPrefs: {
+    credentials_enable_service: false,
+    profile: {
+      password_manager_enabled: false
+    }
+  }
+}));
 
 const axios = require('axios').default;
 const cheerio = require('cheerio');
@@ -18,7 +27,10 @@ const client = wrapper(axios.create({
   jar,
   withCredentials: true,
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Referer': baseURL
   }
 }));
 
@@ -62,19 +74,31 @@ async function getFinalDownloadLink(param) {
   const waitedUrl = `https://musik-mp3.info/downl0ad.php?v=${encodeURIComponent(param)}`;
   console.log('🧭 Launching Puppeteer with stealth to visit:', waitedUrl);
 
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
-  const page = await browser.newPage();
+  const browser = await puppeteer.launch({
+    headless: false,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process'
+    ]
+  });
 
+  const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114 Safari/537.36');
-  await page.goto(waitedUrl, { waitUntil: 'networkidle2', timeout: 0 });
-  await page.waitForTimeout(12000); // nunggu muncul tombol dl
+  await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+
+  console.log('⏳ Navigating to waited link...');
+  await page.goto(waitedUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
+  await page.waitForTimeout(15000); // tunggu 15 detik
 
   const html = await page.content();
   fs.writeFileSync('download_page.html', html);
 
   const finalLink = await page.evaluate(() => {
-    const link = [...document.querySelectorAll('a')].find(a => a.href.includes('cdn77-vid-mp4.others-cdn.com') && a.href.endsWith('.mp4'));
-    return link ? link.href.split('?')[0] : null;
+    const links = Array.from(document.querySelectorAll('a'));
+    const match = links.find(a => a.href.includes('cdn77-vid-mp4.others-cdn.com') && a.href.endsWith('.mp4'));
+    return match ? match.href.split('?')[0] : null;
   });
 
   await browser.close();
