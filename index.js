@@ -1,11 +1,14 @@
-// 📦 XNXX Scraper + Downloader via aria2c (Fixed SSL + Retry)
-// Jalankan: npm i axios cheerio
+// 📦 XNXX Scraper + Auto Downloader to Local Device (Fixed SSL + Retry)
+// Jalankan: npm i axios cheerio fs path https
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // ⚠️ Abaikan sertifikat SSL (tidak disarankan untuk produksi)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
 
 async function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -22,6 +25,20 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
       else throw err;
     }
   }
+}
+
+function downloadToDevice(url, filename) {
+  const filePath = path.resolve(__dirname, filename);
+  const file = fs.createWriteStream(filePath);
+  https.get(url, res => {
+    res.pipe(file);
+    file.on('finish', () => {
+      file.close(() => console.log(`✅ File disimpan ke: ${filePath}`));
+    });
+  }).on('error', err => {
+    fs.unlink(filePath, () => {});
+    console.error('❌ Gagal download langsung:', err.message);
+  });
 }
 
 async function scrapeXNXX(keyword) {
@@ -57,13 +74,14 @@ async function scrapeXNXX(keyword) {
     if (mp4Url) {
       console.log('✅ Link MP4:', mp4Url);
       const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp4`;
+
+      // Download otomatis ke perangkat
+      downloadToDevice(mp4Url, fileName);
+
+      // Optional: Masih bisa pakai aria2c kalau mau
       const aria2cCmd = `aria2c -x 16 -s 16 -o "${fileName}" "${mp4Url}"`;
-      console.log('🚀 Download pakai aria2c...');
+      console.log('🚀 (Optional) Download via aria2c...');
       console.log(`📦 Perintah: ${aria2cCmd}`);
-      exec(aria2cCmd, (err, stdout, stderr) => {
-        if (err) return console.error('❌ Gagal download:', err.message);
-        console.log('✅ Download selesai!');
-      });
     } else {
       console.log('❌ Tidak ditemukan link .mp4');
     }
@@ -72,4 +90,4 @@ async function scrapeXNXX(keyword) {
   }
 }
 
-scrapeXNXX('bokep jepan');
+scrapeXNXX('memek sempit');
