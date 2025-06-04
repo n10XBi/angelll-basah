@@ -1,8 +1,9 @@
-// 📦 XNXX Scraper Lengkap dengan Header & Cookie
+// 📦 XNXX Scraper + Downloader via aria2c (Cepat Banget)
 // Jalankan: npm i axios cheerio
 
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { exec } = require('child_process');
 
 async function scrapeXNXX(keyword) {
   try {
@@ -36,6 +37,14 @@ async function scrapeXNXX(keyword) {
     const mp4Url = mp4Match ? mp4Match[1] : null;
     if (mp4Url) {
       console.log('✅ Link MP4:', mp4Url);
+      const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp4`;
+      const aria2cCmd = `aria2c -x 16 -s 16 -o "${fileName}" "${mp4Url}"`;
+      console.log('🚀 Download pakai aria2c...');
+      console.log(`📦 Perintah: ${aria2cCmd}`);
+      exec(aria2cCmd, (err, stdout, stderr) => {
+        if (err) return console.error('❌ Gagal download:', err.message);
+        console.log('✅ Download selesai!');
+      });
     } else {
       console.log('❌ Tidak ditemukan link .mp4');
     }
