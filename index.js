@@ -1,9 +1,28 @@
-// 📦 XNXX Scraper + Downloader via aria2c (Cepat Banget)
+// 📦 XNXX Scraper + Downloader via aria2c (Fixed SSL + Retry)
 // Jalankan: npm i axios cheerio
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // ⚠️ Abaikan sertifikat SSL (tidak disarankan untuk produksi)
 
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { exec } = require('child_process');
+
+async function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await axios.get(url, { timeout: 15000, ...options });
+      return response;
+    } catch (err) {
+      console.warn(`⚠️ Gagal (${i + 1}/${maxRetries}) fetch: ${url}`);
+      if (i < maxRetries - 1) await delay(3000);
+      else throw err;
+    }
+  }
+}
 
 async function scrapeXNXX(keyword) {
   try {
@@ -18,7 +37,7 @@ async function scrapeXNXX(keyword) {
     const searchUrl = `https://www.xnxx.com/search/${encodeURIComponent(keyword)}`;
     console.log('🔍 Mencari:', searchUrl);
 
-    const res = await axios.get(searchUrl, { headers });
+    const res = await fetchWithRetry(searchUrl, { headers });
     const $ = cheerio.load(res.data);
     const firstVideo = $('div.mozaique .thumb-inside a').first();
     const videoLink = 'https://www.xnxx.com' + firstVideo.attr('href');
@@ -29,10 +48,10 @@ async function scrapeXNXX(keyword) {
     console.log('🔗 Link:', videoLink);
     console.log('🖼️ Thumbnail:', thumb);
 
-    const vidRes = await axios.get(videoLink, { headers });
+    const vidRes = await fetchWithRetry(videoLink, { headers });
     const $$ = cheerio.load(vidRes.data);
     const script = $$('script').filter((i, el) => $$(el).html().includes('setVideoUrlHigh')).first().html();
-    const mp4Match = script.match(/setVideoUrlHigh\('(.*?)'\)/);
+    const mp4Match = script && script.match(/setVideoUrlHigh\('(.*?)'\)/);
 
     const mp4Url = mp4Match ? mp4Match[1] : null;
     if (mp4Url) {
