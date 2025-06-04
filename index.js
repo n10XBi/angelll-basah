@@ -72,4 +72,4 @@ async function scrapeXNXX(keyword) {
   }
 }
 
-scrapeXNXX('bocil indo');
+scrapeXNXX('bokep jepan');
